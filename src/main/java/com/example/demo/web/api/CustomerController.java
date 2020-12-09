@@ -7,12 +7,14 @@ import com.example.demo.web.dto.CustomerCreateDto;
 import com.example.demo.web.dto.CustomerFiltersDto;
 import com.example.demo.web.dto.CustomerReadDto;
 import com.example.demo.web.dto.CustomerUpdateDto;
-import com.example.demo.web.exception.ResourceNotFoundException;
+import com.example.demo.web.exception.GlobalExceptionHandler;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
+
+import javax.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/customers")
@@ -35,11 +37,12 @@ public class CustomerController {
     @GetMapping("/{id}")
     public Mono<CustomerReadDto> getCustomer(@PathVariable(name = "id") Long id) {
         return customerRepository.findById(id)
+                .switchIfEmpty(GlobalExceptionHandler.resourceNotFound())
                 .map(this::toDto);
     }
 
     @PostMapping
-    public Mono<CustomerReadDto> createCustomer(@RequestBody CustomerCreateDto dto) {
+    public Mono<CustomerReadDto> createCustomer(@Valid @RequestBody CustomerCreateDto dto) {
         final var customer = modelMapper.map(dto, Customer.class);
 
         return customerRepository.save(customer)
@@ -49,14 +52,12 @@ public class CustomerController {
     @PutMapping("/{id}")
     public Mono<CustomerReadDto> updateCustomer(@PathVariable(name = "id") Long id,
                                                 @RequestBody CustomerUpdateDto dto) {
-        final Mono<Customer> customer = customerRepository.findById(id);
-
-        customer.thenEmpty(it -> ResourceNotFoundException.supply(id));
-
-        return customer.flatMap(c -> {
-            modelMapper.map(dto, c);
-            return customerRepository.save(c);
-        }).map(this::toDto);
+        return customerRepository.findById(id)
+                .switchIfEmpty(GlobalExceptionHandler.resourceNotFound())
+                .flatMap(c -> {
+                    modelMapper.map(dto, c);
+                    return customerRepository.save(c);
+                }).map(this::toDto);
     }
 
     private CustomerReadDto toDto(Customer customer) {
