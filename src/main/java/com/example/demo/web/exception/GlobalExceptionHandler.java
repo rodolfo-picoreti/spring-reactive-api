@@ -15,6 +15,7 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.OptionalInt;
 
 //@Slf4j
@@ -37,8 +38,10 @@ public class GlobalExceptionHandler extends AbstractErrorWebExceptionHandler {
 
     private Mono<ServerResponse> buildErrorResponse(ServerRequest request) {
         Map<String, Object> errorAttributes = getErrorAttributes(request, ErrorAttributeOptions.defaults());
-
         int status = OptionalInt.of((Integer) errorAttributes.get("status")).orElse(500);
+
+        final Throwable error = getError(request);
+        errorAttributes.put("message", error.getMessage());
 
         return ServerResponse
                 .status(status)

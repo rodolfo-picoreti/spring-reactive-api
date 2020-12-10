@@ -3,10 +3,7 @@ package com.example.demo.web.api;
 
 import com.example.demo.dao.Customer;
 import com.example.demo.dao.CustomerRepository;
-import com.example.demo.web.dto.CustomerCreateDto;
-import com.example.demo.web.dto.CustomerFiltersDto;
-import com.example.demo.web.dto.CustomerReadDto;
-import com.example.demo.web.dto.CustomerUpdateDto;
+import com.example.demo.web.dto.*;
 import com.example.demo.web.exception.GlobalExceptionHandler;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -25,13 +22,22 @@ public class CustomerController {
     private final ModelMapper modelMapper;
 
     @GetMapping
-    public Flux<CustomerReadDto> getCustomers(CustomerFiltersDto filters) {
-        if (filters.getEmail() != null) {
-            return customerRepository.findByEmailContains(filters.getEmail(), filters.toPageable())
-                    .map(this::toDto);
-        }
-        return customerRepository.findByIdNotNull(filters.toPageable())
-                .map(this::toDto);
+    public Flux<PageDto<CustomerReadDto>> getCustomers(CustomerFiltersDto filters) {
+        final var totalRecords = customerRepository.count();
+
+        final var records = customerRepository.findAll()
+                .skip(filters.getPage() * filters.getLimit())
+                .limitRequest(filters.getLimit())
+                .map(this::toDto)
+                .collectList();
+
+        return Flux.zip(records, totalRecords,
+                (r, t) -> PageDto.<CustomerReadDto>builder()
+                        .records(r)
+                        .totalRecords(t)
+                        .thisPage(filters.getPage())
+                        .lastPage(t / filters.getLimit())
+                        .build());
     }
 
     @GetMapping("/{id}")
