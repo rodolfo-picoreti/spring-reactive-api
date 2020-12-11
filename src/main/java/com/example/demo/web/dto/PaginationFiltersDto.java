@@ -16,8 +16,4 @@ public class PaginationFiltersDto {
         this.limit = limit == null ? 10 : limit;
     }
 
-    public PageRequest toPageable() {
-        return PageRequest.of(page, limit);
-    }
-
 }

@@ -7,6 +7,9 @@ import com.example.demo.web.dto.*;
 import com.example.demo.web.exception.GlobalExceptionHandler;
 import lombok.AllArgsConstructor;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.r2dbc.core.R2dbcEntityTemplate;
+import org.springframework.data.relational.core.query.Criteria;
+import org.springframework.data.relational.core.query.Query;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -23,11 +26,11 @@ public class CustomerController {
 
     @GetMapping
     public Flux<PageDto<CustomerReadDto>> getCustomers(CustomerFiltersDto filters) {
-        final var totalRecords = customerRepository.count();
+        final long offset = filters.getLimit() * filters.getPage();
+        final long limit = filters.getLimit();
 
-        final var records = customerRepository.findAll()
-                .skip(filters.getPage() * filters.getLimit())
-                .limitRequest(filters.getLimit())
+        final var totalRecords = customerRepository.countWithFilters(filters.getEmail(), filters.getSsn());
+        final var records = customerRepository.findWithFilters(filters.getEmail(), filters.getSsn(), limit, offset)
                 .map(this::toDto)
                 .collectList();
 

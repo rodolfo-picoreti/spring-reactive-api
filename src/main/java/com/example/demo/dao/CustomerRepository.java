@@ -1,12 +1,29 @@
 package com.example.demo.dao;
 
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.r2dbc.repository.Query;
 import org.springframework.data.repository.reactive.ReactiveCrudRepository;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import javax.validation.constraints.NotNull;
 
 public interface CustomerRepository extends ReactiveCrudRepository<Customer, Long> {
 
-    Flux<Customer> findByIdNotNull(Pageable pageable);
+    @Query("""
+           select count(1) from t_customer c 
+           where (:email is null or c.email like :email)
+             and (:ssn is null or c.ssn like :ssn)
+           """)
+    Mono<Long> countWithFilters(String email, String ssn);
 
-    Flux<Customer> findByEmailContains(String email, Pageable pageable);
+    @Query("""
+           select c.* from t_customer c 
+           where (:email is null or c.email like :email)
+             and (:ssn is null or c.ssn like :ssn)
+           limit :limit
+           offset :offset
+           """)
+    Flux<Customer> findWithFilters(String email, String ssn, long limit, long offset);
+
 }
