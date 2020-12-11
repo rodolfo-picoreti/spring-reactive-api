@@ -12,15 +12,15 @@ public interface CustomerRepository extends ReactiveCrudRepository<Customer, Lon
 
     @Query("""
            select count(1) from t_customer c 
-           where (:email is null or c.email like :email)
-             and (:ssn is null or c.ssn like :ssn)
+           where (:email = '' or c.email like :email)
+             and (:ssn = '' or c.ssn like :ssn)
            """)
     Mono<Long> countWithFilters(String email, String ssn);
 
     @Query("""
            select c.* from t_customer c 
-           where (:email is null or c.email like :email)
-             and (:ssn is null or c.ssn like :ssn)
+           where (:email = '' or c.email like :email)
+             and (:ssn = '' or c.ssn like :ssn)
            limit :limit
            offset :offset
            """)

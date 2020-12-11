@@ -1,3 +1,12 @@
+buildscript {
+	repositories {
+		maven { url "https://plugins.gradle.org/m2/" }
+	}
+	dependencies {
+		classpath 'com.google.protobuf:protobuf-gradle-plugin:0.8.10'
+	}
+}
+
 plugins {
 	id 'org.springframework.boot' version '2.4.0'
 	id 'io.spring.dependency-management' version '1.0.10.RELEASE'
@@ -5,9 +14,45 @@ plugins {
 	// id "org.flywaydb.flyway" version "7.3.1"
 }
 
+apply plugin: 'java'
+apply plugin: "idea"
+apply plugin: 'com.google.protobuf'
+
 group = 'com.example'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = '15'
+
+def reactiveGrpcVersion = '1.0.0'
+def grpcVersion = '1.12.0'
+def protobufVersion = '3.4.0'
+
+protobuf {
+	protoc {
+		// The artifact spec for the Protobuf Compiler
+		artifact = "com.google.protobuf:protoc:${protobufVersion}"
+	}
+	clean {
+		delete protobuf.generatedFilesBaseDir
+	}
+	plugins {
+		grpc {
+			artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+		}
+		rxgrpc {
+			artifact = "com.salesforce.servicelibs:rxgrpc:${reactiveGrpcVersion}"
+		}
+		reactor {
+			artifact = "com.salesforce.servicelibs:reactor-grpc:${reactiveGrpcVersion}"
+		}
+	}
+	generateProtoTasks {
+		all()*.plugins {
+			grpc { }
+			rxgrpc {}
+			reactor {}
+		}
+	}
+}
 
 configurations {
 	compileOnly {
@@ -18,6 +63,8 @@ configurations {
 repositories {
 	mavenCentral()
 }
+
+
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
@@ -39,8 +86,30 @@ dependencies {
 
 	// compile "org.flywaydb:flyway-core:7.3.1"
 	implementation('io.opentelemetry:opentelemetry-api:0.12.0')
+
+	compile "com.google.protobuf:protobuf-java:${protobufVersion}"
+	compile "io.grpc:grpc-stub:${grpcVersion}"
+	compile "io.grpc:grpc-protobuf:${grpcVersion}"
+	compile "com.salesforce.servicelibs:rxgrpc-stub:${reactiveGrpcVersion}"
+	compile "com.salesforce.servicelibs:reactor-grpc-stub:${reactiveGrpcVersion}"
+	compile "com.salesforce.servicelibs:grpc-spring:0.8.1"
+	compile "io.grpc:grpc-netty:${grpcVersion}"
 }
 
 test {
 	useJUnitPlatform()
+}
+
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/grpc')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/rxgrpc')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/reactor')
+sourceSets.main.java.srcDir new File(buildDir, 'generated/source/proto/main/java')
+
+idea {
+	module {
+		generatedSourceDirs += file("build/generated/source/proto/main/grpc")
+		generatedSourceDirs += file("build/generated/source/proto/main/rxgrpc")
+		generatedSourceDirs += file("build/generated/source/proto/main/reactor")
+		generatedSourceDirs += file("build/generated/source/proto/main/java")
+	}
 }
